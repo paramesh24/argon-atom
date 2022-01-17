@@ -1,0 +1,48 @@
+units         metal
+atom_style    atomic
+dimension     3
+boundary      f f f
+
+region        forbox block 0 50 0 50 0 50 units box
+region        for1 block 15 35 15 35 15 35 units box
+create_box    1 forbox
+lattice       fcc 4.58
+create_atoms  1 region for1
+
+mass          1 39.948
+pair_style    lj/cut 12
+pair_coeff    1 1 0.0102383 3.405 12
+neighbor      3.0 bin
+neigh_modify  delay 10 check yes
+group         ar type 1
+minimize      1e-7 1e-9 10000 10000
+print         "Finished minimizing"
+
+
+timestep      0.01
+velocity      ar create 1 102939 dist gaussian mom yes rot yes
+fix           1 ar nve
+dump          dump_1 ar  custom 20 dump.min id type x y z vx vy vz
+thermo_style  custom time temp etotal press vol density
+
+thermo        100
+run           1000
+unfix         1
+
+variable      t1 equal temp
+fix           r  ar wall/reflect xlo 0.0 xhi 50 ylo 0.0 yhi 50 zlo 0.0 zhi 50 units box
+fix           2 ar nvt temp ${t1} 300 10
+run           30000
+unfix         2
+
+variable      t2 equal temp
+fix           3 ar nvt temp ${t2} 0.0001 5
+run           160000
+unfix         3
+
+
+fix           4 ar nve
+run           10000
+unfix         4
+
+undump        dump_1
